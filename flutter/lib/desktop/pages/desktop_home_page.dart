@@ -112,10 +112,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            translate("install_tip"),
-            style: const TextStyle(
-                color: Colors.white, fontSize: 13, height: 1.5),
+          const Text(
+            '安装本程序后，即可随时随地远程访问这台电脑',
+            style: TextStyle(
+                color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '· 支持手机 / 电脑跨端连接\n· 无人值守，支持开机自启\n· 连接全程加密，安全可靠',
+            style: TextStyle(color: Colors.white, fontSize: 12.5, height: 1.6),
           ),
           const SizedBox(height: 14),
           Center(
@@ -190,44 +195,53 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   buildIDBoard(BuildContext context) {
-    final model = gFFI.serverModel;
-    const iconSize = 24.0;
-    const textStyleHeading = TextStyle(
-        fontSize: 16.0, fontWeight: FontWeight.bold, color: Colors.grey);
-    const textStyleValue =
-        TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold);
-    void copyToClipboard(String value) {
-      Clipboard.setData(ClipboardData(text: value));
-      showToast(translate('Copied'));
-    }
-    return Container(
-      margin: const EdgeInsets.only(left: 20, right: 20, top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Icon(Icons.perm_identity, color: Colors.grey, size: iconSize)
-                .marginOnly(right: 15),
-            Text(
-              translate('ID'),
-              style: textStyleHeading,
-            )
-          ]),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(
-              model.serverId.text,
-              style: textStyleValue,
-            ),
-            IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.copy_outlined),
-                onPressed: () {
-                  copyToClipboard(model.serverId.text.trim());
-                })
-          ]).marginOnly(left: 39, bottom: 10),
-        ],
-      ),
-    );
+    return ChangeNotifierProvider.value(
+        value: gFFI.serverModel,
+        child: Consumer<ServerModel>(
+          builder: (context, model, child) {
+            const iconSize = 24.0;
+            const textStyleHeading = TextStyle(
+                fontSize: 16.0, fontWeight: FontWeight.bold, color: Colors.grey);
+            const textStyleValue =
+                TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold);
+            void copyToClipboard(String value) {
+              Clipboard.setData(ClipboardData(text: value));
+              showToast(translate('Copied'));
+            }
+            return Container(
+              margin: const EdgeInsets.only(left: 20, right: 20, top: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.perm_identity,
+                            color: Colors.grey, size: iconSize)
+                        .marginOnly(right: 15),
+                    Text(
+                      translate('ID'),
+                      style: textStyleHeading,
+                    )
+                  ]),
+                  Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          model.serverId.text,
+                          style: textStyleValue,
+                        ),
+                        IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.copy_outlined),
+                            onPressed: () {
+                              copyToClipboard(model.serverId.text.trim());
+                            })
+                      ]).marginOnly(left: 39, bottom: 10),
+                ],
+              ),
+            );
+          },
+        ));
   }
 
   Widget buildPopupMenu(BuildContext context) {

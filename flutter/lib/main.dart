@@ -153,7 +153,7 @@ void runMainApp(bool startService) async {
   WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
       isMainWindow: true,
       alwaysOnTop: alwaysOnTop,
-      size: const Size(420, 500),
+      size: const Size(340, 440),
       useNormalTitleBar: true);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     // Restore the location of the main window before window hide or show.

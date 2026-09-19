@@ -3832,7 +3832,7 @@ Widget loadIcon(double size) {
           ));
 }
 
-var imcomingOnlyHomeSize = Size(420, 500);
+var imcomingOnlyHomeSize = Size(340, 440);
 Size getIncomingOnlyHomeSize() {
   final magicWidth = isWindows ? 11.0 : 2.0;
   final magicHeight = 10.0;
