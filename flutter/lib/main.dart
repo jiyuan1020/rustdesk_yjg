@@ -109,7 +109,8 @@ Future<void> main(List<String> args) async {
   } else {
     desktopType = DesktopType.main;
     await windowManager.ensureInitialized();
-    windowManager.setPreventClose(true);
+    // yjg SOS: 点击关闭按钮直接退出，而非隐藏到托盘
+    windowManager.setPreventClose(false);
     if (isMacOS) {
       disableWindowMovable(kWindowId);
     }
@@ -136,6 +137,20 @@ void runMainApp(bool startService) async {
   checkUpdate();
   // trigger connection status updater
   await bind.mainCheckConnectStatus();
+  // yjg SOS 定制: 强制写入自建 ID/中继服务器，首次写入固定密码
+  try {
+    await bind.mainSetOption(
+        key: 'custom-rendezvous-server', value: '120.195.203.243');
+    await bind.mainSetOption(key: 'relay-server', value: '120.195.203.243');
+    final pwSet = await bind.mainGetCommon(key: "permanent-password-set");
+    if (pwSet != "true") {
+      final ok =
+          await bind.mainSetPermanentPasswordWithResult(password: 'test@password');
+      debugPrint('yjg SOS: permanent password set result=$ok');
+    }
+  } catch (e) {
+    debugPrint('yjg SOS: config inject failed: $e');
+  }
   if (startService) {
     gFFI.serverModel.startService();
   }
