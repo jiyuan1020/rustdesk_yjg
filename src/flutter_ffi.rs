@@ -1351,7 +1351,7 @@ pub fn main_clip_cursor(
 }
 
 pub fn main_get_my_id() -> String {
-    get_id()
+    config::Config::get_id()
 }
 
 pub fn main_get_uuid() -> String {

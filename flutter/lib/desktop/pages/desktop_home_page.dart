@@ -83,7 +83,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   key: _childKey,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    buildTip(context),
                     buildIDBoard(context),
                     buildPasswordBoard(context),
                     if (isWindowsNotInstalled) buildInstallBanner(context),

@@ -153,7 +153,8 @@ void runMainApp(bool startService) async {
   WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
       isMainWindow: true,
       alwaysOnTop: alwaysOnTop,
-      size: const Size(430, 720));
+      size: const Size(420, 500),
+      useNormalTitleBar: true);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     // Restore the location of the main window before window hide or show.
     await restoreWindowPosition(WindowType.Main);
@@ -404,8 +405,11 @@ WindowOptions getHiddenTitleBarWindowOptions(
     {bool isMainWindow = false,
     Size? size,
     bool center = false,
-    bool? alwaysOnTop}) {
-  var defaultTitleBarStyle = TitleBarStyle.hidden;
+    bool? alwaysOnTop,
+    bool useNormalTitleBar = false}) {
+  var defaultTitleBarStyle = useNormalTitleBar
+      ? TitleBarStyle.normal
+      : TitleBarStyle.hidden;
   // we do not hide titlebar on win7 because of the frame overflow.
   if (kUseCompatibleUiMode) {
     defaultTitleBarStyle = TitleBarStyle.normal;

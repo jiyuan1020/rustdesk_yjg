@@ -95,7 +95,6 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
         child: Scaffold(
             backgroundColor: Theme.of(context).colorScheme.background,
             body: Column(children: [
-              _buildTitleBar(context),
               Expanded(
                 child: DesktopHomePage(
                   key: const ValueKey(kTabLabelHomePage),
@@ -111,55 +110,5 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
               child: tabWidget,
             ),
           );
-  }
-
-  Widget _buildTitleBar(BuildContext context) {
-    return Container(
-      height: 36,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xff8a3ff0), Color(0xffd23de2)],
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onPanStart: (_) => windowManager.startDragging(),
-              onDoubleTap: () => toggleMaximize(true)
-                  .then((value) => stateGlobal.setMaximized(value)),
-              child: const SizedBox(),
-            ),
-          ),
-          ActionIcon(
-            message: 'Minimize',
-            icon: IconFont.min,
-            onTap: () => windowManager.minimize(),
-          ),
-          Obx(() => ActionIcon(
-                message: stateGlobal.isMaximized.isTrue
-                    ? 'Restore'
-                    : 'Maximize',
-                icon: stateGlobal.isMaximized.isTrue
-                    ? IconFont.restore
-                    : IconFont.max,
-                onTap: () => toggleMaximize(true)
-                    .then((value) => stateGlobal.setMaximized(value)),
-              )),
-          ActionIcon(
-            message: 'Close',
-            icon: IconFont.close,
-            isClose: true,
-            onTap: () async {
-              await windowManager.setPreventClose(false);
-              await windowManager.close();
-            },
-          ),
-        ],
-      ),
-    );
   }
 }
