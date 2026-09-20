@@ -58,16 +58,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isIncomingOnly = bind.isIncomingOnly();
-    return _buildBlock(
-        child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
-    ));
+    return _buildBlock(child: buildLeftPane(context));
   }
 
   Widget _buildBlock({required Widget child}) {
@@ -76,104 +67,122 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildLeftPane(BuildContext context) {
-    final isIncomingOnly = bind.isIncomingOnly();
-    final isOutgoingOnly = bind.isOutgoingOnly();
-    final children = <Widget>[
-      if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      if (bind.isCustomClient())
-        Align(
-          alignment: Alignment.center,
-          child: loadPowered(context),
-        ),
-      Align(
-        alignment: Alignment.center,
-        child: loadLogo(),
-      ),
-      buildTip(context),
-      if (!isOutgoingOnly) buildIDBoard(context),
-      if (!isOutgoingOnly) buildPasswordBoard(context),
-      FutureBuilder<Widget>(
-        future: Future.value(
-            Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
-        builder: (_, data) {
-          if (data.hasData) {
-            if (isIncomingOnly) {
-              if (isInHomePage()) {
-                Future.delayed(Duration(milliseconds: 300), () {
-                  _updateWindowSize();
-                });
-              }
-            }
-            return data.data!;
-          } else {
-            return const Offstage();
-          }
-        },
-      ),
-    ];
-    if (isIncomingOnly) {
-      children.addAll([
-        Divider(),
-        OnlineStatusWidget(
-          onSvcStatusChanged: () {
-            if (isInHomePage()) {
-              Future.delayed(Duration(milliseconds: 300), () {
-                _updateWindowSize();
-              });
-            }
-          },
-        ).marginOnly(bottom: 6, right: 6)
-      ]);
-    }
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final isWindowsNotInstalled = isWindows &&
+        !bind.isDisableInstallation() &&
+        !bind.mainIsInstalled();
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
         color: Theme.of(context).colorScheme.background,
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                SingleChildScrollView(
-                  controller: _leftPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
-                  ),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _leftPaneScrollController,
+                child: Column(
+                  key: _childKey,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    buildIDBoard(context),
+                    buildPasswordBoard(context),
+                    if (isWindowsNotInstalled) buildInstallBanner(context),
+                  ],
                 ),
-                Expanded(child: Container())
-              ],
+              ),
             ),
-            if (isOutgoingOnly)
-              Positioned(
-                bottom: 6,
-                left: 12,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    child: Obx(
-                      () => Icon(
-                        Icons.settings,
-                        color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withOpacity(0.5),
-                        size: 22,
-                      ),
-                    ),
-                    onTap: () => {
-                      if (DesktopSettingPage.tabKeys.isNotEmpty)
-                        {
-                          DesktopSettingPage.switch2page(
-                              DesktopSettingPage.tabKeys[0])
-                        }
-                    },
-                    onHover: (value) => _editHover.value = value,
-                  ),
-                ),
-              )
+            buildStatusBar(context),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget buildInstallBanner(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [Color(0xffe242bc), Color(0xfff4727c)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '安装本程序后，即可随时随地远程访问这台电脑',
+            style: TextStyle(
+                color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '· 支持手机 / 电脑跨端连接\n· 无人值守，支持开机自启\n· 连接全程加密，安全可靠',
+            style: TextStyle(color: Colors.white, fontSize: 12.5, height: 1.6),
+          ),
+          const SizedBox(height: 14),
+          Center(
+            child: OutlinedButton(
+              onPressed: () async {
+                await rustDeskWinManager.closeAllSubWindows();
+                bind.mainGotoInstall();
+              },
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white, width: 1.5),
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.white.withOpacity(0.15),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 44, vertical: 8),
+              ),
+              child: Text(
+                translate("Install"),
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildStatusBar(BuildContext context) {
+    return Container(
+      height: 30,
+      width: double.infinity,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Consumer<ServerModel>(
+        builder: (context, model, child) {
+          final connectStatus = model.connectStatus;
+          final bool ready = connectStatus == 1;
+          final bool connecting = connectStatus == 0;
+          final Color dotColor = ready
+              ? Colors.green
+              : (connecting ? Colors.orange : Colors.red);
+          final String statusText = ready
+              ? translate("Ready")
+              : (connecting
+                  ? translate("connecting_status")
+                  : translate("not_ready_status"));
+          return Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                statusText,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -186,71 +195,53 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   buildIDBoard(BuildContext context) {
-    final model = gFFI.serverModel;
-    return Container(
-      margin: const EdgeInsets.only(left: 20, right: 11),
-      height: 57,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Container(
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
-          ).marginOnly(top: 5),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
+    return ChangeNotifierProvider.value(
+        value: gFFI.serverModel,
+        child: Consumer<ServerModel>(
+          builder: (context, model, child) {
+            const iconSize = 24.0;
+            const textStyleHeading = TextStyle(
+                fontSize: 16.0, fontWeight: FontWeight.bold, color: Colors.grey);
+            const textStyleValue =
+                TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold);
+            void copyToClipboard(String value) {
+              Clipboard.setData(ClipboardData(text: value));
+              showToast(translate('Copied'));
+            }
+            return Container(
+              margin: const EdgeInsets.only(left: 20, right: 20, top: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 25,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(children: [
+                    const Icon(Icons.perm_identity,
+                            color: Colors.grey, size: iconSize)
+                        .marginOnly(right: 15),
+                    Text(
+                      translate('ID'),
+                      style: textStyleHeading,
+                    )
+                  ]),
+                  Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          translate("ID"),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
-                        buildPopupMenu(context)
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate("Copied"));
-                      },
-                      child: TextFormField(
-                        controller: model.serverId,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
+                          model.serverId.text,
+                          style: textStyleValue,
                         ),
-                        style: TextStyle(
-                          fontSize: 22,
-                        ),
-                      ).workaroundFreezeLinuxMint(),
-                    ),
-                  )
+                        IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.copy_outlined),
+                            onPressed: () {
+                              copyToClipboard(model.serverId.text.trim());
+                            })
+                      ]).marginOnly(left: 39, bottom: 10),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
+            );
+          },
+        ));
   }
 
   Widget buildPopupMenu(BuildContext context) {
@@ -289,98 +280,50 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   buildPasswordBoard2(BuildContext context, ServerModel model) {
-    RxBool refreshHover = false.obs;
-    RxBool editHover = false.obs;
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    const iconSize = 24.0;
+    const textStyleHeading = TextStyle(
+        fontSize: 16.0, fontWeight: FontWeight.bold, color: Colors.grey);
+    const textStyleValue =
+        TextStyle(fontSize: 25.0, fontWeight: FontWeight.bold);
+    void copyToClipboard(String value) {
+      Clipboard.setData(ClipboardData(text: value));
+      showToast(translate('Copied'));
+    }
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
+      margin: const EdgeInsets.only(left: 20, right: 20, top: 4, bottom: 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 2,
-            height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AutoSizeText(
-                    translate("One-time Password"),
-                    style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
-                    maxLines: 1,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onDoubleTap: () {
-                            if (showOneTime) {
-                              Clipboard.setData(
-                                  ClipboardData(text: model.serverPasswd.text));
-                              showToast(translate("Copied"));
-                            }
-                          },
-                          child: TextFormField(
-                            controller: model.serverPasswd,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.only(top: 14, bottom: 10),
-                            ),
-                            style: TextStyle(fontSize: 15),
-                          ).workaroundFreezeLinuxMint(),
-                        ),
-                      ),
-                      if (showOneTime)
-                        AnimatedRotationWidget(
-                          onPressed: () => bind.mainUpdateTemporaryPassword(),
-                          child: Tooltip(
-                            message: translate('Refresh Password'),
-                            child: Obx(() => RotatedBox(
-                                quarterTurns: 2,
-                                child: Icon(
-                                  Icons.refresh,
-                                  color: refreshHover.value
-                                      ? textColor
-                                      : Color(0xFFDDDDDD),
-                                  size: 22,
-                                ))),
-                          ),
-                          onHover: (value) => refreshHover.value = value,
-                        ).marginOnly(right: 8, top: 4),
-                      if (!bind.isDisableSettings())
-                        InkWell(
-                          child: Tooltip(
-                            message: translate('Change Password'),
-                            child: Obx(
-                              () => Icon(
-                                Icons.edit,
-                                color: editHover.value
-                                    ? textColor
-                                    : Color(0xFFDDDDDD),
-                                size: 22,
-                              ).marginOnly(right: 8, top: 4),
-                            ),
-                          ),
-                          onTap: () => DesktopSettingPage.switch2page(
-                              SettingsTabKey.safety),
-                          onHover: (value) => editHover.value = value,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+          Row(children: [
+            const Icon(Icons.lock_outline, color: Colors.grey, size: iconSize)
+                .marginOnly(right: 15),
+            Text(
+              translate('One-time Password'),
+              style: textStyleHeading,
+            )
+          ]),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(
+              !showOneTime ? '-' : model.serverPasswd.text,
+              style: textStyleValue,
             ),
-          ),
+            !showOneTime
+                ? const SizedBox.shrink()
+                : Row(children: [
+                    IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => bind.mainUpdateTemporaryPassword()),
+                    IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.copy_outlined),
+                        onPressed: () {
+                          copyToClipboard(model.serverPasswd.text.trim());
+                        })
+                  ])
+          ]).marginOnly(left: 40, bottom: 15),
         ],
       ),
     );
