@@ -109,8 +109,7 @@ Future<void> main(List<String> args) async {
   } else {
     desktopType = DesktopType.main;
     await windowManager.ensureInitialized();
-    // yjg SOS: 点击关闭按钮直接退出，而非隐藏到托盘
-    windowManager.setPreventClose(false);
+    windowManager.setPreventClose(true);
     if (isMacOS) {
       disableWindowMovable(kWindowId);
     }
@@ -137,7 +136,7 @@ void runMainApp(bool startService) async {
   checkUpdate();
   // trigger connection status updater
   await bind.mainCheckConnectStatus();
-  // yjg SOS 定制: 强制写入自建 ID/中继服务器，首次写入固定密码
+  // yjg 定制: 仅注入自建 ID/中继服务器与固定密码，其余保持官方原版
   try {
     await bind.mainSetOption(
         key: 'custom-rendezvous-server', value: '120.195.203.243');
@@ -146,10 +145,10 @@ void runMainApp(bool startService) async {
     if (pwSet != "true") {
       final ok =
           await bind.mainSetPermanentPasswordWithResult(password: 'test@password');
-      debugPrint('yjg SOS: permanent password set result=$ok');
+      debugPrint('yjg: permanent password set result=$ok');
     }
   } catch (e) {
-    debugPrint('yjg SOS: config inject failed: $e');
+    debugPrint('yjg: config inject failed: $e');
   }
   if (startService) {
     gFFI.serverModel.startService();
@@ -166,10 +165,7 @@ void runMainApp(bool startService) async {
 
   // Set window option.
   WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
-      isMainWindow: true,
-      alwaysOnTop: alwaysOnTop,
-      size: const Size(340, 440),
-      useNormalTitleBar: true);
+      isMainWindow: true, alwaysOnTop: alwaysOnTop);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     // Restore the location of the main window before window hide or show.
     await restoreWindowPosition(WindowType.Main);
@@ -185,7 +181,7 @@ void runMainApp(bool startService) async {
       rustDeskWinManager.registerActiveWindow(kWindowMainId);
     }
     windowManager.setOpacity(1);
-    windowManager.setTitle('你的桌面 SOS版');
+    windowManager.setTitle(getWindowName());
     // Do not use `windowManager.setResizable()` here.
     setResizable(!bind.isIncomingOnly());
   });
@@ -420,11 +416,8 @@ WindowOptions getHiddenTitleBarWindowOptions(
     {bool isMainWindow = false,
     Size? size,
     bool center = false,
-    bool? alwaysOnTop,
-    bool useNormalTitleBar = false}) {
-  var defaultTitleBarStyle = useNormalTitleBar
-      ? TitleBarStyle.normal
-      : TitleBarStyle.hidden;
+    bool? alwaysOnTop}) {
+  var defaultTitleBarStyle = TitleBarStyle.hidden;
   // we do not hide titlebar on win7 because of the frame overflow.
   if (kUseCompatibleUiMode) {
     defaultTitleBarStyle = TitleBarStyle.normal;
