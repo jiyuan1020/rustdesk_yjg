@@ -14,6 +14,7 @@ jobs:
         with:
           ref: master
           token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - name: Update Cargo.lock
         run: cargo update
